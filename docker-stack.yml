@@ -1,0 +1,27 @@
+version: '3.1'
+
+services:
+  nginx:
+    image: nginx
+    ports:
+      - 8888:80
+
+  rabbit:
+    image: rabbitmq:3-management
+    # deploy:
+     # mode: replicated
+    #  replicas:
+    
+    ports:
+      - 15672:15672
+
+  visualizer:
+    image: dockersamples/visualizer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8080:8080
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
