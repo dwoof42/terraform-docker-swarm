@@ -28,14 +28,14 @@ resource "aws_instance" "swarm_master" {
       "sudo docker swarm join-token --quiet worker > /home/ec2-user/worker-token"
     ]
   }
-  # provisioner "file" {
-  #   source = "proj"
-  #   destination = "/home/ubuntu/"
-  # }
+  provisioner "file" {
+    source = "docker-stack.yml"
+    destination = "/home/ec2-user/docker-stack.xml"
+  }
 }
 
 resource "aws_instance" "slave" {
-  count         = 2
+  count         = 4
   ami           = "${var.swarm-imageid}"
   instance_type = "t3.micro"
   security_groups = ["${aws_security_group.swarm.id}"]
