@@ -3,6 +3,10 @@ variable "access_key" {}
 variable "secret_key" {}
 
 
+variable "master_name" {
+  default = "swarm-master"
+}
+
 variable "tagname" {
   default = "swarm"
 }

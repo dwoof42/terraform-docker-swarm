@@ -10,7 +10,7 @@ resource "aws_instance" "swarm_master" {
   associate_public_ip_address = true
 
   tags {
-    Name = "${var.tagname}"
+    Name = "${var.master_name}"
   }
   
   connection {
@@ -25,17 +25,19 @@ resource "aws_instance" "swarm_master" {
       "sudo service docker start",
       "sudo usermod -a -G docker ec2-user",
       "sudo docker swarm init",
-      "sudo docker swarm join-token --quiet worker > /home/ec2-user/worker-token"
+      "sudo docker swarm join-token --quiet worker > /home/ec2-user/worker-token",
+      "sudo docker swarm join-token --quiet manager > /home/ec2-user/manager-token",
+      "sudo docker network create -d overlay --attachable stack"
     ]
   }
   provisioner "file" {
     source = "docker-stack.yml"
-    destination = "/home/ec2-user/docker-stack.xml"
+    destination = "/home/ec2-user/docker-stack.yml"
   }
 }
 
-resource "aws_instance" "slave" {
-  count         = 4
+resource "aws_instance" "secondary" {
+  count         = 2
   ami           = "${var.swarm-imageid}"
   instance_type = "t3.micro"
   security_groups = ["${aws_security_group.swarm.id}"]
@@ -46,10 +48,14 @@ resource "aws_instance" "slave" {
 
   associate_public_ip_address = true
 
-
   connection {
     user = "ec2-user"
     private_key = "${file("${var.private_key}")}"
+  }
+
+  provisioner "file" {
+    source = "ssh/key.pem"
+    destination  = "/home/ec2-user/key.pem"
   }
   provisioner "remote-exec" {
     inline = [
@@ -57,32 +63,49 @@ resource "aws_instance" "slave" {
       "sudo yum install -y docker",
       "sudo service docker start",
       "sudo usermod -a -G docker ec2-user",
+      "sudo scp -o StrictHostKeyChecking=no -o NoHostAuthenticationForLocalhost=yes -o UserKnownHostsFile=/dev/null -i key.pem ec2-user@${aws_instance.swarm_master.private_ip}:/home/ec2-user/manager-token .",
+      "sudo docker swarm join --token $(cat manager-token) ${aws_instance.swarm_master.private_ip}:2377"
     ]
   }
 
-  /*
-  connection {
-    user = "ubuntu"
-    private_key = "ssh/key"
+  tags = { 
+    Name = "${var.tagname}-${count.index}"
   }
+}
+
+
+resource "aws_instance" "slave" {
+  count         = 5
+  ami           = "${var.swarm-imageid}"
+  instance_type = "t3.micro"
+  security_groups = ["${aws_security_group.swarm.id}"]
+  key_name = "swarm"
+
+
+  subnet_id = "${aws_subnet.swarm.*.id[0]}"
+
+  associate_public_ip_address = true
+
+  connection {
+    user = "ec2-user"
+    private_key = "${file("${var.private_key}")}"
+  }
+
   provisioner "file" {
-    source = "key.pem"
-    destination = "/home/ubuntu/key.pem"
+    source = "ssh/key.pem"
+    destination  = "/home/ec2-user/key.pem"
   }
   provisioner "remote-exec" {
     inline = [
-      "sudo apt-get update",
-      "sudo apt-get install apt-transport-https ca-certificates",
-      "sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D",
-      "sudo sh -c 'echo \"deb https://apt.dockerproject.org/repo ubuntu-trusty main\" > /etc/apt/sources.list.d/docker.list'",
-      "sudo apt-get update",
-      "sudo apt-get install -y docker-engine=1.12.0-0~trusty",
-      "sudo chmod 400 /home/ubuntu/test.pem",
-      "sudo scp -o StrictHostKeyChecking=no -o NoHostAuthenticationForLocalhost=yes -o UserKnownHostsFile=/dev/null -i test.pem ubuntu@${aws_instance.master.private_ip}:/home/ubuntu/token .",
-      "sudo docker swarm join --token $(cat /home/ubuntu/token) ${aws_instance.master.private_ip}:2377"
+      "sudo yum update -y",
+      "sudo yum install -y docker",
+      "sudo service docker start",
+      "sudo usermod -a -G docker ec2-user",
+      "sudo scp -o StrictHostKeyChecking=no -o NoHostAuthenticationForLocalhost=yes -o UserKnownHostsFile=/dev/null -i key.pem ec2-user@${aws_instance.swarm_master.private_ip}:/home/ec2-user/worker-token .",
+      "sudo docker swarm join --token $(cat worker-token) ${aws_instance.swarm_master.private_ip}:2377"
     ]
   }
-  */
+
   tags = { 
     Name = "${var.tagname}-${count.index}"
   }

@@ -1,19 +1,47 @@
 version: '3.1'
 
 services:
-  nginx:
-    image: nginx
-    ports:
-      - 8888:80
+  # nginx:
+  #   image: nginx
+  #   ports:
+  #     - 8888:80
 
-  rabbit:
+  server-info: 
+    image: dwoof42/server-info:latest
+    deploy:
+      mode: global
+    environment:
+      - ASPNETCORE_URLS=http://*:4000
+    networks:
+      - stack
+
+  rabbit1:
     image: rabbitmq:3-management
-    # deploy:
-     # mode: replicated
-    #  replicas:
-    
     ports:
-      - 15672:15672
+      - 10000:15672
+    networks:
+      - stack
+  rabbit2:
+    image: rabbitmq:3-management
+    ports:
+      - 10001:15672
+    networks:
+      - stack
+  rabbit3:
+    image: rabbitmq:3-management
+    ports:
+      - 10002:15672
+    networks:
+      - stack
+
+  proxy:
+    image: dwoof42/nginx-proxy-sample:1.0.4
+    ports:
+      - 80:80
+    networks:
+      - stack
+    deploy:
+      replicas: 2
 
   visualizer:
     image: dockersamples/visualizer
@@ -25,3 +53,9 @@ services:
       placement:
         constraints:
           - node.role == manager
+    networks:
+      - stack
+
+networks:
+  stack:
+    external: true
