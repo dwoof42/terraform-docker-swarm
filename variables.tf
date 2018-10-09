@@ -24,6 +24,6 @@ variable "eks-imagesize" {
 }
 
 variable "private_key" {
-  default = "/home/dfoster/.ssh/swarm.pem"
+  default = "~/.ssh/swarm.pem"
 }
 

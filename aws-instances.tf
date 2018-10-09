@@ -75,7 +75,7 @@ resource "aws_instance" "secondary" {
 
 
 resource "aws_instance" "slave" {
-  count         = 5
+  count         = 3
   ami           = "${var.swarm-imageid}"
   instance_type = "t3.micro"
   security_groups = ["${aws_security_group.swarm.id}"]
