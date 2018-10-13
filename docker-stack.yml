@@ -15,6 +15,13 @@ services:
     networks:
       - stack
 
+  server-info-client:
+    image: dwoof42/server-info-client:latest
+    environment:
+      - ASPNETCORE_URLS=http://*5000
+    networks:
+      - stack
+
   rabbit1:
     image: rabbitmq:3-management
     ports:
