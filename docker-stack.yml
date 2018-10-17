@@ -1,4 +1,4 @@
-version: '3.1'
+version: '3.7'
 
 services:
   # nginx:
@@ -12,37 +12,34 @@ services:
       mode: global
     environment:
       - ASPNETCORE_URLS=http://*:4000
+    ports:
+      - 4000:4000
     networks:
       - stack
 
   server-info-client:
     image: dwoof42/server-info-client:latest
     environment:
-      - ASPNETCORE_URLS=http://*5000
+      - PORT=5000
+      - URL=http://server-info:4000/api/values
     networks:
       - stack
 
   rabbit1:
     image: rabbitmq:3-management
     ports:
-      - 10000:15672
-    networks:
-      - stack
-  rabbit2:
-    image: rabbitmq:3-management
-    ports:
-      - 10001:15672
-    networks:
-      - stack
-  rabbit3:
-    image: rabbitmq:3-management
-    ports:
-      - 10002:15672
+      - 15672:15672
+    deploy:
+      placement:
+        constraints:
+          - node.labels.rabbit == rabbit
+    volumes:
+      - /var/lib/rabbitmq:/var/lib/rabbitmq
     networks:
       - stack
 
   proxy:
-    image: dwoof42/nginx-proxy-sample:1.0.4
+    image: dwoof42/nginx-proxy-sample:1.0.8
     ports:
       - 80:80
     networks:
@@ -60,6 +57,37 @@ services:
       placement:
         constraints:
           - node.role == manager
+    networks:
+      - stack
+
+  mongo:
+    image: mongo
+    ports: 
+      - 27017:27017
+  web:
+    image: nginx
+    ports: 
+      - 81:81
+    environment:
+      - NGINX_PORT=81
+    networks:
+      - stack
+
+  redis:
+    image: redis
+    networks:
+      - stack
+
+
+  counter-consumer:
+    image: dwoof42/counter-consumer:1.0.1
+    networks:
+      - stack
+    deploy:
+      replicas: 2
+
+  counter-producer:
+    image: dwoof42/counter-producer:1.0.1
     networks:
       - stack
 

@@ -20,6 +20,7 @@ resource "aws_instance" "swarm_master" {
   
   provisioner "remote-exec" {
     inline = [
+      "sudo mkdir /var/lib/rabbitmq",
       "sudo yum update -y",
       "sudo yum install -y docker",
       "sudo service docker start",
@@ -27,6 +28,7 @@ resource "aws_instance" "swarm_master" {
       "sudo docker swarm init",
       "sudo docker swarm join-token --quiet worker > /home/ec2-user/worker-token",
       "sudo docker swarm join-token --quiet manager > /home/ec2-user/manager-token",
+      "sudo docker node update --label-add 'rabbit=rabbit' $(docker node ls -q)",
       "sudo docker network create -d overlay --attachable stack"
     ]
   }
